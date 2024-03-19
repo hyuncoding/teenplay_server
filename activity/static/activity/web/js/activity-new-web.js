@@ -119,7 +119,6 @@ $(document).ready(function () {
                 });
                 const data = await response.json();
                 const imageUrl = await data.image_path;
-                console.log(imageUrl)
                 const imageId = await data.image_id;
                 $(".presentation-size").summernote('insertImage', imageUrl);
                 let imageIdInput = document.createElement("input");
@@ -467,8 +466,8 @@ const createActivity = async (pay) => {
     let summernoteContent = $('.presentation-size').summernote('code');
     let activityContent = document.createElement("input")
     activityContent.setAttribute("type", "hidden");
-    activityContent.setAttribute("name", "activity-content")
-    activityContent.setAttribute("value", JSON.stringify(summernoteContent))
+    activityContent.setAttribute("name", "activity-content");
+    activityContent.setAttribute("value",summernoteContent);
     activityForm.appendChild(activityContent)
 
     await activityForm.submit();
