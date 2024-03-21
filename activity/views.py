@@ -467,58 +467,93 @@ class ActivityListWebView(View):
         # keyword는 검색어를 입력하였거나 추천 검색어 중 하나를 클릭하여 활동 목록으로 넘어왔을 경우 해당 단어가 담깁니다.
         keyword = request.POST.get('keyword', '')
 
-
+        # get방식과 마찬가지로 지역 목록과 카테고리 목록을 담아줍니다.
         regions = Region.objects.filter(status=True)
         categories = Category.objects.filter(status=True)
 
+        # 검색어가 있을 경우 아래 if문에 진입합니다.
         if keyword:
-            recent_search, created = RecentSearch.objects.get_or_create(member_id=request.session.get('member').get('id'), keyword=keyword)
+            # 최근 검색어(tbl_recent_search) 테이블에서 get_or_create()를 사용하여 최근 검색어를 저장합니다.
+            recent_search, created = RecentSearch.objects.get_or_create(member_id=request.session.et('member').get('id'), keyword=keyword)
+            # 만약 created가 False라면, 이미 테이블에 존재하지만 status가 0이라는 뜻입니다.
             if not created:
+                # 따라서 status를 1로 변경한 후 save()를 통해 update합니다.
                 recent_search.status = 1
                 recent_search.updated_date = timezone.now()
                 recent_search.save(update_fields=['status', 'updated_date'])
 
+        # 선택된 카테고리와 검색어, 카테고리 목록 및 지역 목록을 context에 담아줍니다.
+        # 카테고리와 검색어는 각각 없을 경우 None과 ''(빈 문자열)이 담기게 됩니다.
         context = {
             'selected_category': selected_category,
             'categories': categories,
             'regions': regions,
             'keyword': keyword
         }
+
         return render(request, 'activity/web/activity-web.html', context=context)
 
 
 class ActivityListAPI(APIView):
+    # 활동 목록 페이지에서 기간/모집종료여부/지역/카테고리 등의 필터 및 페이지네이션과 함께 fetch로 요청한 데이터를
+    # 응답하는 REST API입니다.
     def post(self, request):
+        # fetch 요청의 body에서 JSON.stringify()를 통해 전달받은 데이터입니다.
         data = request.data
 
+        # 현재 로그인한 사용자의 id를 세션에서 받아옵니다.
         member_id = request.session.get('member').get('id')
 
-        # 검색했을 시
+        # 검색을 통해 활동 목록 페이지로 이동한 후 fetch 요청으로 검색어가 들어왔을 경우입니다.
         keyword = data.get('keyword', '')
         if keyword == "None":
             keyword = ""
-        # 나머지들
+
+        # 전달받은 페이지를 정수로 형변환하며, 기본값을 1로 설정해줍니다.
         page = int(data.get('page', 1))
+
+        # 전달받은 기간 필터의 값을 담아주며, 기본값은 '모든날'입니다.
         date = data.get('date', '모든날')
+
+        # 전달받은 지역 필터의 값을 담아주며, 기본값은 빈 문자열입니다.
         region = data.get('region', '')
+
+        # 전달받은 카테고리 필터 리스트를 담아주며, 기본값은 빈 리스트입니다.
         categories = data.get('categories', [])
+
+        # 전달받은 "모집 종료 활동 표시 여부"를 담아주며, 기본값은 False입니다.
         show_finished = data.get('showFinished', False)
+
+        # 전달받은 정렬 옵션을 담아주며, 기본값은 '새 행사순(최신순)'입니다.
         ordering = data.get('ordering', '새 행사순')
+
+        # 받아온 정렬 옵션을 바로 order_by()에서 일괄처리하기 위해 정렬 옵션에 따른 실제 입력값을 딕셔너리로 만들어줍니다.
         order_options = {
             '추천순': '-id',
             '새 행사순': '-id',
             '모집 마감일순': 'recruit_end'
         }
+
+        # 페이지네이션을 위한 내용입니다.
+        # 활동 목록에서는 한 페이지에 최대 12개의 활동을 표시합니다.
         row_count = 12
+
+        # 현재 페이지의 시작 인덱스를 구합니다.
         offset = (page - 1) * row_count
+
+        # 현재 페이지의 마지막 인덱스를 구합니다.
         limit = page * row_count
 
+        # Queryset의 filter()에 추가할 조건을 초기화해줍니다.
         condition = Q()
 
+        # 받아온 keyword의 포함여부를 조건에 추가합니다.
         condition &= Q(activity_title__icontains=keyword) | Q(activity_content__icontains=keyword)
 
+        # 받아온 지역에 해당하는지 여부를 조건에 추가합니다.
         condition &= Q(activity_address_location__icontains=region)
 
+        # 받아온 기간 필터에 따라 조건을 추가합니다.
         if date == '오늘':
             condition &= Q(activity_start__lte=timezone.now(), activity_end__gte=timezone.now())
         elif date == '이번주':
@@ -529,28 +564,47 @@ class ActivityListAPI(APIView):
                            activity_end__gte=timezone.now())
         elif date == '모든날':
             condition = condition
+        # 아래 else에 진입하는 경우는 기간 필터가 "기간 선택"일 경우입니다.
+        # 화면에서 datetimepicker api를 통해 입력한 기간을 문자열로 전달받은 후 make_datetime() 함수를 통해 datetime객체로 변환합니다.
         else:
             start_date, end_date = date.split(' - ')
             start_date = make_datetime(start_date)
             end_date = make_datetime(end_date)
             condition &= Q(activity_start__lte=end_date, activity_end__gte=start_date)
 
+        # 카테고리가 빈 리스트가 아닐 경우, 즉 카테고리 필터를 선택했을 경우 해당 리스트의 각 카테고리에 대해
+        # 해당하는 활동들을 모두 보여주도록 __in을 사용하여 조건에 추가합니다.
         if categories:
             condition &= Q(category_id__in=categories)
+
+        # 모집 종료 활동 표시 여부가 False라면 조건을 추가합니다.
         if not show_finished:
             condition &= Q(recruit_start__lte=timezone.now(), recruit_end__gte=timezone.now())
 
+        # 활동 목록 페이지에서 페이지네이션과 관계없이 필터에 맞는 활동의 총 개수를 출력하기 위해 total_count에 담아줍니다.
         total_count = Activity.enabled_objects.filter(condition).count()
 
+        # 한 화면에 보여줄 페이지 버튼의 개수를 5로 설정합니다.
         page_count = 5
+
+        # 현재 페이지를 해당 개수로 나눈 후 math.ceil()을 통해 올림하여 다시 해당 개수를 곱함으로써 현재 보여줄 마지막 페이지를 정합니다.
         end_page = math.ceil(page / page_count) * page_count
+
+        # 마지막 페이지로부터 현재 페이지네이션에 보여줄 첫 번째 페이지를 정합니다.
         start_page = end_page - page_count + 1
+
+        # 실제 총 페이지의 개수를 구합니다.
+        # 전체 활동 개수에서 한 페이지당 표시할 활동의 개수를 나눠준 후, 나머지가 생길 경우를 대비해 math.ceil()로 올려줍니다.
         real_end = math.ceil(total_count / row_count)
+
+        # 이때 앞서 구한 현재 화면에서의 마지막 페이지가 더 크다면 마지막 페이지를 real_end로 바꿔줍니다.
         end_page = real_end if end_page > real_end else end_page
 
+        # 게시물이 하나도 없어 페이지가 0이라면 화면에서 1로 표시하기 위해 1로 바꿔줍니다.
         if end_page == 0:
             end_page = 1
 
+        # 화면 쪽 javascript에서 활용하기 위해 페이지네이션 관련 정보들을 page_info 딕셔너리에 담아줍니다.
         page_info = {
             'totalCount': total_count,
             'startPage': start_page,
@@ -559,11 +613,19 @@ class ActivityListAPI(APIView):
             'realEnd': real_end,
             'pageCount': page_count,
         }
+
+        # 모든 필터들 및 정렬 옵션을 적용한 활동들을 values()를 통해 딕셔너리로 변환한 후 페이지네이션에 맞추어 끊어줍니다.
+        # 그리고 list타입으로 형변환합니다.
         activities = list(Activity.enabled_objects.filter(condition)\
                           .values().order_by(order_options[ordering])[offset:limit])
+
+        # 각 활동마다 참가자 수 및 현재 로그인한 사용자가 관심활동으로 등록했는지 여부를 표시하기 위해 따로 조회하여
+        # 딕셔너리에 key:value 형식으로 추가합니다.
         for activity in activities:
             activity['member_count'] = ActivityMember.enabled_objects.filter(activity_id=activity['id']).count()
             activity['is_like'] = ActivityLike.enabled_objects.filter(activity_id=activity['id'], member_id=member_id).exists()
+
+        # 하나의 리스트로 응답하기 위해 리스트에 page_info와 total_count를 append()해줍니다.
         activities.append(page_info)
         activities.append(total_count)
 
@@ -571,6 +633,7 @@ class ActivityListAPI(APIView):
 
 
 class ActivityCategoryAPI(APIView):
+    # 헤더에서 카테고리 목록을 불러오기 위한 REST API입니다.
     def get(self, request):
         categories = list(Category.objects.filter(status=True).values())
 
@@ -578,10 +641,18 @@ class ActivityCategoryAPI(APIView):
 
 
 class ActivityJoinWebView(View):
+    # 활동 신청 페이지로 이동하기 위한 view입니다.
     def get(self, request):
+        # 쿼리스트링으로 활동의 id를 받아와 저장합니다.
         activity_id = request.GET.get('id')
+
+        # 해당 id로 활동 객체를 조회합니다.
         activity = Activity.enabled_objects.get(id=activity_id)
+
+        # 해당 활동의 구성원 수를 집계하여 담아줍니다.
         member_count = ActivityMember.enabled_objects.filter(activity_id=activity_id).count()
+
+        # 화면에 표시하기 위한 해당 정보들을 context에 담아줍니다.
         context = {
             'activity': activity,
             'member_count': member_count
@@ -589,23 +660,39 @@ class ActivityJoinWebView(View):
 
         return render(request, 'activity/web/activity-join-web.html', context=context)
 
+    # 활동 신청 요청에 응답하는 view입니다.
     def post(self, request):
+        # post방식으로 받아온 데이터를 담아줍니다.
         data = request.POST
+
+        # 참가 상태(status)는 기본값인 -1(승인 대기중)로 지정한 후 data 딕셔너리에 담아줍니다.
         data = {
             'activity_id': data.get('activity-id'),
             'member_id': data.get('member-id'),
             'status': -1
         }
+
+        # get_or_create()를 통해 tbl_activity_member에 insert혹은 update해줍니다.
         activity_member, created = ActivityMember.objects.get_or_create(**data)
+
+        # created가 False라면 이미 존재하는 데이터이며,
+        # 이때 soft delete 혹은 신청 반려로 인해 status가 0일 경우에만 if문에 진입합니다.
         if not created and activity_member.status == 0:
+            # status를 -1(승인 대기중)으로 변경한 후 save()를 통해 update합니다.
             activity_member.status = -1
             activity_member.updated_date = timezone.now()
             activity_member.save(update_fields=['status', 'updated_date'])
 
-        # 활동 가입 신청 알림 모임장에게 전송하기
+        # 활동 가입 신청에 대한 알림을 해당 활동을 개설한 모임의 모임장에게 전송합니다.
+        # 받아온 활동의 id로 활동 객체를 조회합니다.
         activity = Activity.enabled_objects.filter(id=request.POST.get('activity-id')).first()
+
+        # 활동 객체의 필드인 모임 객체의 id로 다시 모임 객체를 조회합니다.
         club = Club.enabled_objects.filter(id=activity.club.id).first()
+
+        # 두 객체가 모두 None이 아닐 경우, 즉 유효할 경우 아래 if문에 진입하여 알림을 생성합니다.
         if activity and club:
+            # 알림을 생성하기 위한 데이터를 딕셔너리에 담아준 후 create()를 통해 insert합니다.
             alarm_data = {
                 'target_id': activity.id,
                 'alarm_type': 11,
@@ -614,16 +701,30 @@ class ActivityJoinWebView(View):
             }
             Alarm.objects.create(**alarm_data)
 
+        # 활동 신청 후에는 마이페이지-나의 활동 페이지로 redirect합니다.
         return redirect('/member/mypage-activity/')
 
 
 class ActivityImageUploadAPI(APIView):
+    # 활동 개설 시 summernote editor에서 업로드한 이미지를 따로 처리하기 위한 REST API입니다.
     def post(self, request):
+        # summernote editor에서 업로드한 이미지를 받아옵니다.
         upload_image = request.FILES.get('image')
+
+        # 해당 이미지를 ActivityImage의 ImageField 타입 필드로 tbl_activity_image 테이블에 insert합니다.
         activity_image = ActivityImage.objects.create(image_path=upload_image)
+
+        # 이때 status를 0으로 함으로써 사용자가 이미지 업로드 후 활동 개설을 완료하지 않았을 때
+        # django-cron 라이브러리를 활용하여 Schedule()에 등록함으로써(tasks.py)
+        # 매일 밤 12시마다 하루 전 날 자정까지의 tbl_activity_image에서 status가 0인 이미지의 경로에 맞는 파일을 삭제합니다.
         activity_image.status = 0
         activity_image.save(update_fields=['status'])
+
+        # 화면에서 실제 저장된 이미지 경로를 받아 summernote editor에 바로 표시하기 위해 전달합니다.
         image_path = activity_image.image_path.url
+
+        # 해당 이미지의 id를 화면으로 전달함으로써 활동 개설 완료 시 업로드한 이미지들의 id를 통해
+        # 해당 컬럼들의 activity_id(fk)를 개설 완료한 활동의 id로 변경할 수 있도록 합니다.
         image_id = activity_image.id
 
         return Response({
