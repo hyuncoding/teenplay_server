@@ -450,4 +450,13 @@ signalBtns.forEach((signalBtn, i) => {
 });
 
 
-// 관리하기 버튼 클릭 시 모임관리 페이지로 이동 (모임관리 작업 시작 시 추가)
+// 관리하기 버튼 클릭 시 모임관리 페이지로 이동
+const manageBtns = document.querySelectorAll(".manage-btn");
+if (manageBtns) {
+    manageBtns.forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+            let clubId = clubIds[i].value;
+            location.href = `/member/mypage-club/${clubId}/`;
+        })
+    })
+}
