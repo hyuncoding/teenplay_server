@@ -474,7 +474,7 @@ class ActivityListWebView(View):
         # 검색어가 있을 경우 아래 if문에 진입합니다.
         if keyword:
             # 최근 검색어(tbl_recent_search) 테이블에서 get_or_create()를 사용하여 최근 검색어를 저장합니다.
-            recent_search, created = RecentSearch.objects.get_or_create(member_id=request.session.get('member').get('id'), keyword=keyword)
+            recent_search, created = RecentSearch.enabled_objects.get_or_create(member_id=request.session.get('member').get('id'), keyword=keyword)
 
             # 만약 created가 False라면, 이미 테이블에 존재하지만 status가 0이라는 뜻입니다.
             if not created:

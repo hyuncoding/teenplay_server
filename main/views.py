@@ -128,7 +128,7 @@ class RecentSearchKeywordAPI(APIView):
 
         # 해당 id를 기준으로 최근 검색어에서 soft delete되지 않은 검색어를 최신순으로 6개까지
         # values()를 통해 딕셔너리로 조회한 후 해당 Queryset을 list로 형변환합니다.
-        keywords = list(RecentSearch.enabled_objects.filter(member_id=member_id).values().order_by('-id')[:6])
+        keywords = list(RecentSearch.enabled_objects.filter(member_id=member_id).values().order_by('-updated_date')[:6])
 
         return Response(keywords)
 
