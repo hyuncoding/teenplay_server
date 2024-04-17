@@ -14,17 +14,17 @@
 
 #### 🧷배포 url (하단의 로고를 클릭하세요)
 
-<a href="http://teenplay.shop/"><img src="https://github.com/team-teenplay/teenplay_server/assets/156397974/f9e554d3-2476-4ed7-8791-4a146e67cf07"/></a>
+<a href="http://teenplay.site/"><img src="https://github.com/team-teenplay/teenplay_server/assets/156397974/f9e554d3-2476-4ed7-8791-4a146e67cf07"/></a>
 
 <table>
     <tbody>
       <tr>
-            <td><b>http://teenplay.shop/</b></td>
+            <td><b>http://teenplay.site/</b></td>
       </tr>
     </tbody>
 </table>
 
-<a href="http://teenplay.shop/"><img src="https://img.shields.io/badge/Teenplay-EE0000?style=for-the-badge&logo=paypal&logoColor=white"/></a>
+<a href="http://teenplay.site/"><img src="https://img.shields.io/badge/Teenplay-EE0000?style=for-the-badge&logo=paypal&logoColor=white"/></a>
 
 
 ### ✍️기획 의도
