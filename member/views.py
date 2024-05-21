@@ -1,5 +1,8 @@
 import math
+import os
+from pathlib import Path
 
+import joblib
 from bootpay_backend import BootpayBackend
 from django.db import transaction
 from django.db.models import F, Q, Value, Count
@@ -80,6 +83,14 @@ class MemberJoinWebView(View):
 
         # data 딕셔너리를 이용하여 tbl_member에 insert하고 반환된 객체를 member에 담아줍니다.
         member = Member.objects.create(**data)
+
+        # 회원별 ai 모델을 생성합니다.
+        # 1. 활동 추천 ai 모델
+        model_path = os.path.join(Path(__file__).resolve().parent, 'ai/activity_recommender.pkl')
+        model = joblib.load(model_path)
+        member_model_path = f'ai/2024/05/20/activity_model{member.id}.pkl'
+        os.makedirs(os.path.dirname(member_model_path), exist_ok=True)
+        joblib.dump(model, member_model_path)
 
         # member에 담긴 객체를 직렬화하여 member에 다시 담아줍니다.
         member = MemberSerializer(member).data
