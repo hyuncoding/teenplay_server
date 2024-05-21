@@ -587,7 +587,9 @@ p {
 }
 
 .profile-default-img {
-    width: 100%;
+    width: 4rem;
+    height: 4rem;
+    margin: 1rem;
 }
 
 /* 틴친 프로필 이름 부분 */

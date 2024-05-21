@@ -53,17 +53,17 @@ class MainView(View):
             is_like = ActivityLike.enabled_objects.filter(activity_id=activity.id, member_id=member_id).exists()
             activity.is_like = is_like
 
-        # AI 추천 부분은 추후에 구현하고자 현재는 최신순으로 정렬합니다.
-        # 나머지 로직은 인기활동 및 최신활동과 동일합니다.
-        recommend_activities = Activity.enabled_objects\
-                                   .annotate(member_count=Count('activitymember')).order_by('-id')[:8]
-
-        for activity in recommend_activities:
-            # 각 활동마다 관심활동으로 등록한 사용자의 수를 집계하여 담아줍니다.
-            likes = ActivityLike.enabled_objects.filter(activity_id=activity.id).count()
-            activity.like_count = likes
-            is_like = ActivityLike.enabled_objects.filter(activity_id=activity.id, member_id=member_id).exists()
-            activity.is_like = is_like
+        # # AI 추천 부분은 추후에 구현하고자 현재는 최신순으로 정렬합니다.
+        # # 나머지 로직은 인기활동 및 최신활동과 동일합니다.
+        # recommend_activities = Activity.enabled_objects\
+        #                            .annotate(member_count=Count('activitymember')).order_by('-id')[:8]
+        #
+        # for activity in recommend_activities:
+        #     # 각 활동마다 관심활동으로 등록한 사용자의 수를 집계하여 담아줍니다.
+        #     likes = ActivityLike.enabled_objects.filter(activity_id=activity.id).count()
+        #     activity.like_count = likes
+        #     is_like = ActivityLike.enabled_objects.filter(activity_id=activity.id, member_id=member_id).exists()
+        #     activity.is_like = is_like
 
         # 인기 모임목록을 구성원 수가 많은 순으로 정렬하여 최대 8개까지 가져옵니다.
         popular_clubs = Club.enabled_objects.annotate(member_count=Count('clubmember')).order_by('-member_count')[:8]
@@ -99,7 +99,7 @@ class MainView(View):
         context = {
             'popular_activities': popular_activities,
             'new_activities': new_activities,
-            'recommend_activities': recommend_activities,
+            # 'recommend_activities': recommend_activities,
             'popular_clubs': popular_clubs
         }
 

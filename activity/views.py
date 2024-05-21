@@ -1,5 +1,8 @@
 import math
+import os
+from pathlib import Path
 
+import joblib
 from django.db import transaction
 from django.db.models import F, Q
 from django.shortcuts import render, redirect
@@ -15,11 +18,13 @@ from festival.models import Festival
 from member.models import Member, MemberProfile
 from pay.models import Pay
 from search.models import RecentSearch
+from teenplay_server import settings
 from teenplay_server.category import Category
 import re
 
 from teenplay_server.models import Region
 from bootpay_backend import BootpayBackend
+import pickle
 
 def make_datetime(date, time="00:00"):
     '''
@@ -197,6 +202,26 @@ class ActivityDetailWebView(View):
 
         # 활동 상세페이지는 기획 상 로그인한 유저만 조회할 수 있으므로 세션에서 사용자의 id를 받아와 저장합니다.
         member_id = request.session['member']['id']
+        member = Member.enabled_objects.get(id=member_id)
+
+        # 회원에 맞는 활동 추천 ai 모델을 불러옵니다.
+        model_file_name = member.member_recommended_activity_model
+
+        # path
+        model_file_path = os.path.join(Path(__file__).resolve().parent.parent, model_file_name)
+
+        # pkl 파일을 열어 객체 로드
+        model = joblib.load(model_file_path)
+
+        # 불러온 ai 모델에 추가 fit을 진행합니다.
+        additional_X_train = [activity.category.category_name + activity.activity_title + activity.activity_intro + activity.activity_address_location]
+        additional_y_train = [activity.category.id]
+
+        additional_X_train_transformed = model.named_steps['count_v'].transform(additional_X_train)
+        model.named_steps['mnnb'].partial_fit(additional_X_train_transformed, additional_y_train, classes=[i for i in range(1, 14)])
+
+        # fit이 완료된 모델을 다시 같은 경로에 같은 이름으로 내보내줍니다.
+        joblib.dump(model, member.member_recommended_activity_model)
 
         # 해당 활동의 구성원 수를 Queryset 객체의 count() 메소드를 통해 조회합니다.
         activity_member_count = ActivityMember.enabled_objects.filter(activity_id=activity_id).count()
@@ -271,6 +296,30 @@ class ActivityLikeAPI(APIView):
                 activity_like.status = 1
                 activity_like.updated_date = timezone.now()
                 activity_like.save(update_fields=['status', 'updated_date'])
+
+            member = Member.enabled_objects.get(id=member_id)
+            activity = Activity.enabled_objects.get(id=activity_id)
+
+            # 회원에 맞는 활동 추천 ai 모델을 불러옵니다.
+            model_file_name = member.member_recommended_activity_model
+
+            # path
+            model_file_path = os.path.join(Path(__file__).resolve().parent.parent, model_file_name)
+
+            # pkl 파일을 열어 객체 로드
+            model = joblib.load(model_file_path)
+
+            # 불러온 ai 모델에 추가 fit을 진행합니다.
+            additional_X_train = [
+                activity.category.category_name + activity.activity_title + activity.activity_intro + activity.activity_address_location]
+            additional_y_train = [activity.category.id]
+
+            additional_X_train_transformed = model.named_steps['count_v'].transform(additional_X_train)
+            model.named_steps['mnnb'].partial_fit(additional_X_train_transformed, additional_y_train,
+                                                  classes=[i for i in range(1, 14)])
+
+            # fit이 완료된 모델을 다시 같은 경로에 같은 이름으로 내보내줍니다.
+            joblib.dump(model, member.member_recommended_activity_model)
 
             # 아래 코드로 내려가지 않도록 return해줍니다.
             return Response("added")

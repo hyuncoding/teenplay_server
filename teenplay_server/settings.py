@@ -36,6 +36,7 @@ ALLOWED_HOSTS = ['43.200.66.43', '127.0.0.1', 'localhost', 'teenplay.site']
 # Application definition
 
 INSTALLED_APPS = [
+    'ai',
     'main',
     'oauth',
     'search',
@@ -140,7 +141,7 @@ DATABASES = {
         # 계정 비밀번호
         'PASSWORD': '1234',
         # DBMS가 설치된 서버 PC의 IP, (127.0.0.1 = 로컬)
-        'HOST': '13.125.225.147',
+        'HOST': '13.125.213.142',
         # DBMS의 포트번호
         'PORT': '3306'
     }
