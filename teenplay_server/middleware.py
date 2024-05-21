@@ -8,7 +8,7 @@ def pre_handle_request(get_response):
 
         # 로그인이 필요한 서비스와 필요하지 않은 서비스를 구분하여 로그인이 필요하지 않은 서비스들은 이곳에 적어줍니다.
         if 'accounts' not in uri and 'oauth' not in uri and 'api' not in uri and 'static' not in uri\
-                and 'admin' not in uri and 'upload' not in uri and 'kakao' not in uri:
+                and 'admin' not in uri and 'upload' not in uri and 'kakao' not in uri and 'favicon' not in uri:
             if 'join' not in uri and 'login' not in uri and uri != '/' and 'terms' not in uri \
                     and 'company' not in uri and 'club/intro' not in uri\
                     and 'notice' not in uri and 'festival' not in uri \
