@@ -323,7 +323,7 @@
                                                         <a href="{{ pop_club.get_absolute_url }}" ondragstart="return false">
                                                             <div class="clup-profile-box">
                                                                 <div class="clup-profile-thumbnail">
-                                                                    {% if pop_club.club_profile_path %}
+                                                                    {% if pop_club.club_profile_path and pop_club.club_profile_path != ' '%}
                                                                         <img class="clup-thumbnail-img" alt="모임 썸네일 이미지" src="/upload/{{ pop_club.club_profile_path }}" />
                                                                     {% else %}
                                                                         <img class="clup-thumbnail-img" alt="모임 썸네일 이미지" src="{% static 'public/web/images/logo/logo1.png' %}" />
