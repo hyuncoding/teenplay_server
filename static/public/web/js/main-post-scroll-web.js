@@ -89,4 +89,3 @@ const addScrollEventToPostLists = () => {
     });
 }
 
-addScrollEventToPostLists();
