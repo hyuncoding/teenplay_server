@@ -242,6 +242,7 @@ const showRecommendedActivities = (activities) => {
             </div>`;
     })
     addClickEventToLikeBtns();
+    addScrollEventToPostLists();
 }
 
 const getRecommendedActivities = async (callback) => {
