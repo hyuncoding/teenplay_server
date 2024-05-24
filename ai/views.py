@@ -43,7 +43,7 @@ class RecommendedActivityAPIView(APIView):
             return Response(data)
 
         member = Member.enabled_objects.get(id=member.get('id'))
-        model = joblib.load(os.path.join(Path(__file__).resolve().parent.parent, member.member_recommended_activity_model))
+        model = joblib.load(member.member_recommended_activity_model)
         member_favorite_categories = MemberFavoriteCategory.objects.filter(member=member, status=True)
         member_favorite_categories = " ".join([category.category.category_name for category in member_favorite_categories])
         member_keywords = " ".join([member.member_keyword1, member.member_keyword2, member.member_keyword3])
